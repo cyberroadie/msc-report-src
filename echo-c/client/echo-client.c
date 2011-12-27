@@ -7,51 +7,118 @@
 #include <netinet/in.h>
 #include <netinet/sctp.h>
 #include <arpa/inet.h>
+#include "echo-client.h"
+#include "../common.h"
 
-int main() {
-  
+struct audit audit;
+
+void echo_client(char *host, int port, char *message, long count) {
+
   int flags;
-  struct sctp_initmsg initmsg;
   struct sockaddr_in serverAddress;
+  audit.success = 0;
+  audit.failure = 0;
 
-  bzero(&initmsg, sizeof(initmsg));
-  
-  // one-to-one sctp mode
-  int socketDescriptor = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
   bzero((void *)&serverAddress, sizeof(serverAddress));
-  serverAddress.sin_family = AF_INET; // ipv4 for now
+  serverAddress.sin_family = AF_INET; 
   serverAddress.sin_port = htons(4342);
   serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
 
+  int socketDescriptor = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(-1 == connect(socketDescriptor, 
-                   (struct sockaddr *) &serverAddress, 
-                   sizeof(serverAddress))) {
-      perror("connection failure");
-      close(socketDescriptor);
-      exit(EXIT_FAILURE);  
-  }
-
-  int numbytes = 0;
-  char *msg = "hello";
-  if((numbytes = send(socketDescriptor, msg, strlen(msg) + 1, 0)) == -1) {
-    perror("send failure");
+        (struct sockaddr *) &serverAddress, 
+        sizeof(serverAddress))) {
+    perror("connection failure");
     close(socketDescriptor);
-    exit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);  
   }
 
-  printf("%i bytes sent\n", numbytes); 
-  numbytes = 0;
-  char buffer[1024];
-  if((numbytes = recv(socketDescriptor, &buffer, sizeof(buffer), 0)) == -1) {
-    perror("recv failure");
-    exit(EXIT_FAILURE);
-  }
+  for(int i = 0; i < count; i++) {
+    int numbytes = 0;
+    if((numbytes = send(socketDescriptor, message, strlen(message) + 1, 0)) == -1) {
+      perror("send failure");
+      audit.failure++;
+      continue;
+    }
 
-  printf("%i bytes received\n", numbytes); 
-  buffer[numbytes] = '\0';
-  puts(buffer);
+    numbytes = 0;
+    char buffer[1024];
+    if((numbytes = recv(socketDescriptor, &buffer, sizeof(buffer), 0)) == -1) {
+      perror("recv failure");
+      audit.failure++;
+      continue;
+    }
+
+    audit.success++;
+  }
+ 
+  // send close message
+  if(send(socketDescriptor, CLOSE_MESSAGE, strlen(CLOSE_MESSAGE) + 1, 0) == -1) {
+      perror("send close server socket message failure");
+  }
 
   close(socketDescriptor);
+
+  printf("%i messages send succesful\n", audit.success); 
+  printf("%i messages failed\n", audit.failure); 
+
   exit(EXIT_SUCCESS);
 }
+
+static void usage(void) {
+  printf("-i <ip address/hostname>      server to connect to (default: localhost)\n"
+      "-p <port number>              port number to connect to (default: 4242)\n"
+      "-m <message>                  message to send (default: hello)\n"
+      "-c <count>                    number of messages to send (default: 1)\n"
+      );
+  return;
+}
+
+struct settings settings;
+
+static void settings_init(void) {
+  settings.host = "127.0.0.1";
+  settings.port = 4242;
+  settings.message = "hello";
+  settings.count = 1;
+}
+
+int main(int argc, char **argv) {
+ 
+  int c;
+
+  settings_init();
+
+  while (-1 != (c = getopt(argc, argv,
+          "h:"
+          "i:"
+          "p:"
+          "m:"
+          "c:"
+          ))) {
+    switch (c) {
+      case 'h':
+        usage();
+        exit(EXIT_SUCCESS);
+      case 'i':
+        settings.host = optarg;
+        break;
+      case 'p':
+        settings.port = atoi(optarg);
+        break;
+      case 'm':
+        settings.message = optarg;
+        break;
+      case 'c':
+        settings.count = atol(optarg);
+        break;
+      default:
+        fprintf(stderr, "Illegal argument \"%c\"\n", c);
+        exit(EXIT_FAILURE);
+    }
+  }
+  echo_client(settings.host, settings.port, settings.message, settings.count);
+}
+
+
