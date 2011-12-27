@@ -14,7 +14,6 @@ struct audit audit;
 
 void echo_client(char *host, int port, char *message, long count) {
 
-  int flags;
   struct sockaddr_in serverAddress;
   audit.success = 0;
   audit.failure = 0;
@@ -33,11 +32,26 @@ void echo_client(char *host, int port, char *message, long count) {
     close(socketDescriptor);
     exit(EXIT_FAILURE);  
   }
+  
+  size_t length;
+  uint32_t nlength;
+  int numbytes;
 
   for(int i = 0; i < count; i++) {
-    int numbytes = 0;
-    if((numbytes = send(socketDescriptor, message, strlen(message) + 1, 0)) == -1) {
-      perror("send failure");
+
+    // send size of message
+    length = strlen(message);
+    nlength = htonl(length);
+
+    if((numbytes = send(socketDescriptor, &nlength, 4, 0)) == -1) {
+      perror("send message size failure");
+      audit.failure++;
+      continue;
+    } 
+
+    // send message
+    if((numbytes = send(socketDescriptor, message, length, 0)) == -1) {
+      perror("send message failure");
       audit.failure++;
       continue;
     }
@@ -53,15 +67,23 @@ void echo_client(char *host, int port, char *message, long count) {
     audit.success++;
   }
  
+  length = strlen(CLOSE_MESSAGE);
+  nlength = htonl(length);
+
+  if((numbytes = send(socketDescriptor, &nlength, 4, 0)) == -1) {
+      perror("send message size failure");
+      exit(EXIT_FAILURE);
+  }
+
   // send close message
-  if(send(socketDescriptor, CLOSE_MESSAGE, strlen(CLOSE_MESSAGE) + 1, 0) == -1) {
+  if(send(socketDescriptor, CLOSE_MESSAGE, length, 0) == -1) {
       perror("send close server socket message failure");
   }
 
   close(socketDescriptor);
 
-  printf("%i messages send succesful\n", audit.success); 
-  printf("%i messages failed\n", audit.failure); 
+  printf("%lu messages send succesful\n", audit.success); 
+  printf("%lu messages failed\n", audit.failure); 
 
   exit(EXIT_SUCCESS);
 }

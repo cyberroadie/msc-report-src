@@ -21,33 +21,28 @@ void *threadFunc(void *arg) {
     inet_ntop(AF_INET, &data->clientAddress.sin_addr.s_addr, &buffer, sizeof(buffer));
     printf("Connection accepted from: %s \n", &buffer);
 
-    char msg[MAX_MESSAGE_SIZE];
+    char *msg;
 
     int total_numbytes = 0;
     int numbytes = 0;
+    uint32_t length, nlength;
     
     for(;;) {
-again:
-      if((numbytes = recv(data->acceptedSocket, &msg, sizeof(msg), 0)) == -1) {
-        perror("recv failure");
+      if((numbytes = recv(data->acceptedSocket, &nlength, 4, 0)) == -1) {
+        perror("recv message size failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
       }
 
-      // find end of message
-      for(int i = 0; i < numbytes; i++) {
-        total_numbytes++;
-        if(msg[i] == '\0') goto response;
-      }
-
-      if(total_numbytes >= MAX_MESSAGE_SIZE) {
-        perror("message size failure");  
+      length = ntohl(nlength);
+      msg = malloc(length + 1);
+      if((numbytes = recv(data->acceptedSocket, msg, length, 0)) == -1) {
+        perror("recv message failure");
+        close(data->acceptedSocket);
         pthread_exit(NULL);
       }
+      msg[length] = 0;
 
-      goto again;
-
-response:
       if(strcmp(msg, CLOSE_MESSAGE) == 0) break;
       numMessages++;
 
