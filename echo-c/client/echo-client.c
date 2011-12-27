@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <netinet/sctp.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h> /* TCP_NODELAY lives here */
 #include "echo-client.h"
 #include "../common.h"
 
@@ -33,6 +34,10 @@ void echo_client(char *host, int port, char *message, long count) {
     exit(EXIT_FAILURE);  
   }
   
+  int flag = 1;
+  setsockopt(socketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+
+ 
   size_t length;
   uint32_t nlength;
   int numbytes;
