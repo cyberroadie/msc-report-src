@@ -16,6 +16,12 @@ struct audit audit;
 
 void echo_client(char *host, int port, char *message, long count) {
 
+  typedef struct CLIENT_TYPE {
+      uint32_t nlength;
+      uint32_t nid;
+      char * msg;
+  } CLIENT_MSG;
+
   struct sockaddr_in serverAddress;
   audit.success = 0;
   audit.failure = 0;
@@ -50,23 +56,13 @@ void echo_client(char *host, int port, char *message, long count) {
     // send size of message
     length = strlen(message);
     nlength = htonl(length);
-
-    if((numbytes = write(socketDescriptor, &nlength, 4)) == -1) {
-      perror("send message size failure");
-      audit.failure++;
-      break;
-    } 
-
-    // send message id
     nid = htonl(id);
-    if((numbytes = write(socketDescriptor, &nid, 4)) == -1) {
-      perror("send message id failure");
-      audit.failure++;
-      break;
-    }
+
+    CLIENT_MSG cm;
+    cm = (CLIENT_MSG) { nlength, nid, message };
 
     // send message
-    if((numbytes = write(socketDescriptor, message, length)) == -1) {
+    if((numbytes = write(socketDescriptor, &cm, sizeof(cm))) == -1) {
       perror("send message failure");
       audit.failure++;
       break;
