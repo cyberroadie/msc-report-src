@@ -53,18 +53,21 @@ void *threadFunc(void *arg) {
       /* get message */
       char *msg;
       length = ntohl(nlength);
-      msg = malloc(length);
+      msg = malloc(length + 1);
+      if(settings.verbose) printf("length of message %lu \n", length);
+      
       if((numbytes = read(data->acceptedSocket, msg, length)) == -1) {
         printf("%lu messages received\n", numMessages);
         perror("recv message failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
-
       }
       msg[length] = 0;
       numMessages++;
 
       /* send message id back as acknowledgement */
+      if(settings.verbose) printf("sending id back %lu \n", ntohl(nid));
+      
       if((numbytes = write(data->acceptedSocket, &nid, 4)) == -1) {
         perror("send failure");
         close(data->acceptedSocket);
