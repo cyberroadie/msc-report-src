@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <unistd.h> /* optarg */
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -22,8 +22,8 @@ void echo_client(char *host, int port, char *message, long count) {
 
   bzero((void *)&serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET; 
-  serverAddress.sin_port = htons(4342);
-  serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+  serverAddress.sin_port = htons(port);
+  serverAddress.sin_addr.s_addr = inet_addr(host);
 
   int socketDescriptor = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(-1 == connect(socketDescriptor, 
@@ -109,6 +109,7 @@ static void settings_init(void) {
   settings.port = 4242;
   settings.message = "hello";
   settings.count = 1;
+  settings.bufsize = 4096;
 }
 
 int main(int argc, char **argv) {
@@ -123,6 +124,7 @@ int main(int argc, char **argv) {
           "p:"
           "m:"
           "c:"
+          "b:"
           ))) {
     switch (c) {
       case 'h':
@@ -139,6 +141,9 @@ int main(int argc, char **argv) {
         break;
       case 'c':
         settings.count = atol(optarg);
+        break;
+      case 'b':
+        settings.bufsize = atoi(optarg);
         break;
       default:
         fprintf(stderr, "Illegal argument \"%c\"\n", c);
