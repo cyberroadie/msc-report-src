@@ -7,6 +7,7 @@ struct settings {
     char *message; /* message to send to server */
     long count; /* number of messages to send */
     int bufsize;
+    bool verbose;
 };
 
 struct audit {

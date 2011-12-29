@@ -5,6 +5,7 @@ struct settings {
     int port;
     char *host;
     char *message; /* answer to send to client */
+    bool verbose;
 };
 
 #endif 

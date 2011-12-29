@@ -6,8 +6,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include "echo-server.h"
 #include "../common.h"
+
+struct settings settings;
 
 typedef struct thread_data {
   int acceptedSocket;
@@ -24,10 +27,9 @@ void *threadFunc(void *arg) {
     inet_ntop(AF_INET, &(data->clientAddress.sin_addr), addr, INET_ADDRSTRLEN); 
     printf("Connection accepted from: %s \n", addr);
 
-    char *msg;
 
     int numbytes = 0;
-    uint32_t length, nlength;
+    uint32_t length, nlength, id, nid;
     
     for(;;) {
       /* get message length */
@@ -36,26 +38,34 @@ void *threadFunc(void *arg) {
         close(data->acceptedSocket);
         pthread_exit(NULL);
       }
-
-      /* get message */
-      length = ntohl(nlength);
-      msg = malloc(length + 1);
-      if((numbytes = recv(data->acceptedSocket, msg, length, 0)) == -1) {
-        perror("recv message failure");
+      /* check if last message is sent */
+      if(ntohl(nlength) == 0) break;
+      
+      /* get message id */
+      if((numbytes = recv(data->acceptedSocket, &nid, 4, 0)) == -1) {
+        perror("recv message size failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
       }
-      msg[length] = 0;
+      id = ntohl(nid);
+      if(settings.verbose) printf("message %lu received\n", id);
 
-      /* check if this is the last message */
-      if(strcmp(msg, CLOSE_MESSAGE) == 0) break;
+      /* get message */
+      char *msg;
+      length = ntohl(nlength);
+      msg = malloc(length);
+      if((numbytes = recv(data->acceptedSocket, msg, length, 0)) == -1) {
+        printf("%lu messages received\n", numMessages);
+        perror("recv message failure");
+        close(data->acceptedSocket);
+        pthread_exit(NULL);
+
+      }
+      msg[length] = 0;
       numMessages++;
 
-      char rtn_msg[strlen(data->message)];
-      rtn_msg[0] = '\0';
-      strcat(rtn_msg, msg);
-      strcat(rtn_msg, data->message);
-      if((numbytes = send(data->acceptedSocket, rtn_msg, sizeof(rtn_msg), 0)) == -1) {
+      /* send message id back as acknowledgement */
+      if((numbytes = send(data->acceptedSocket, &nid, 4, 0)) == -1) {
         perror("send failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
@@ -94,7 +104,6 @@ int echo_server(char *host, int port, char *message) {
   }
 
   socklen_t len = sizeof(clientAddress);
-  char addr[INET_ADDRSTRLEN];
 
   for(;;) {
     int acceptedSocketDescriptor = 
@@ -129,12 +138,11 @@ static void usage(void) {
   return;
 }
 
-struct settings settings;
-
 static void settings_init(void) {
   settings.host = "0.0.0.0";
   settings.port = 4242;
   settings.message = "recv";
+  settings.verbose= false;
 }
 
 int main(int argc, char **argv) {
@@ -150,6 +158,7 @@ int main(int argc, char **argv) {
           "m:"
           "c:"
           "b:"
+          "v"
           ))) {
     switch (c) {
       case 'h':
@@ -163,6 +172,9 @@ int main(int argc, char **argv) {
         break;
       case 'm':
         settings.message = optarg;
+        break;
+      case 'v':
+        settings.verbose = true;
         break;
       default:
         fprintf(stderr, "Illegal argument \"%c\"\n", c);
