@@ -5,7 +5,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <netinet/sctp.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h> /* TCP_NODELAY lives here */
 #include "echo-client.h"
