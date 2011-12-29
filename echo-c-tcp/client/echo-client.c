@@ -51,7 +51,7 @@ void echo_client(char *host, int port, char *message, long count) {
     length = strlen(message);
     nlength = htonl(length);
 
-    if((numbytes = send(socketDescriptor, &nlength, 4, 0)) == -1) {
+    if((numbytes = write(socketDescriptor, &nlength, 4)) == -1) {
       perror("send message size failure");
       audit.failure++;
       break;
@@ -59,21 +59,21 @@ void echo_client(char *host, int port, char *message, long count) {
 
     // send message id
     nid = htonl(id);
-    if((numbytes = send(socketDescriptor, &nid, 4, 0)) == -1) {
+    if((numbytes = write(socketDescriptor, &nid, 4)) == -1) {
       perror("send message id failure");
       audit.failure++;
       break;
     }
 
     // send message
-    if((numbytes = send(socketDescriptor, message, length, 0)) == -1) {
+    if((numbytes = write(socketDescriptor, message, length)) == -1) {
       perror("send message failure");
       audit.failure++;
       break;
     }
 
     /* get response (message id) */
-    if((numbytes = recv(socketDescriptor, &ack_nid, 4, 0)) == -1) {
+    if((numbytes = read(socketDescriptor, &ack_nid, 4)) == -1) {
       perror("recv id failure");
       audit.failure++;
       break;

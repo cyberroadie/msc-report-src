@@ -33,7 +33,7 @@ void *threadFunc(void *arg) {
     
     for(;;) {
       /* get message length */
-      if((numbytes = recv(data->acceptedSocket, &nlength, 4, 0)) == -1) {
+      if((numbytes = read(data->acceptedSocket, &nlength, 4)) == -1) {
         perror("recv message size failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
@@ -42,7 +42,7 @@ void *threadFunc(void *arg) {
       if(ntohl(nlength) == 0) break;
       
       /* get message id */
-      if((numbytes = recv(data->acceptedSocket, &nid, 4, 0)) == -1) {
+      if((numbytes = read(data->acceptedSocket, &nid, 4)) == -1) {
         perror("recv message size failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
@@ -54,7 +54,7 @@ void *threadFunc(void *arg) {
       char *msg;
       length = ntohl(nlength);
       msg = malloc(length);
-      if((numbytes = recv(data->acceptedSocket, msg, length, 0)) == -1) {
+      if((numbytes = read(data->acceptedSocket, msg, length)) == -1) {
         printf("%lu messages received\n", numMessages);
         perror("recv message failure");
         close(data->acceptedSocket);
@@ -65,7 +65,7 @@ void *threadFunc(void *arg) {
       numMessages++;
 
       /* send message id back as acknowledgement */
-      if((numbytes = send(data->acceptedSocket, &nid, 4, 0)) == -1) {
+      if((numbytes = write(data->acceptedSocket, &nid, 4)) == -1) {
         perror("send failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
