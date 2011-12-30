@@ -73,7 +73,7 @@ void echo_client(char *host, int port, char *message, long count) {
     }
 
     /* get response (message id) */
-    if((numbytes = recv(socketDescriptor, &ack_nid, 4, 0)) == -1) {
+    if((numbytes = recv(socketDescriptor, &ack_nid, 4, MSG_WAITALL)) == -1) {
       perror("recv id failure");
       audit.failure++;
       break;

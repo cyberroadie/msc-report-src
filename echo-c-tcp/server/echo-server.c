@@ -33,20 +33,22 @@ void *threadFunc(void *arg) {
     
     for(;;) {
       /* get message length */
-      if((numbytes = recv(data->acceptedSocket, &nlength, 4, 0)) == -1) {
+      if((numbytes = recv(data->acceptedSocket, &nlength, 4, MSG_WAITALL)) == -1) {
         perror("recv message size failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
       }
+
       /* check if last message is sent */
       if(ntohl(nlength) == 0) break;
       
       /* get message id */
-      if((numbytes = recv(data->acceptedSocket, &nid, 4, 0)) == -1) {
+      if((numbytes = recv(data->acceptedSocket, &nid, 4, MSG_WAITALL)) == -1) {
         perror("recv message size failure");
         close(data->acceptedSocket);
         pthread_exit(NULL);
       }
+
       id = ntohl(nid);
       if(settings.verbose) printf("message %lu received\n", id);
 
@@ -54,7 +56,7 @@ void *threadFunc(void *arg) {
       char *msg;
       length = ntohl(nlength);
       msg = malloc(length);
-      if((numbytes = recv(data->acceptedSocket, msg, length, 0)) == -1) {
+      if((numbytes = recv(data->acceptedSocket, msg, length, MSG_WAITALL)) == -1) {
         printf("%lu messages received\n", numMessages);
         perror("recv message failure");
         close(data->acceptedSocket);
