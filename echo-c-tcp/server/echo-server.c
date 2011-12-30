@@ -105,28 +105,28 @@ int echo_server(char *host, int port, char *message) {
 
   socklen_t len = sizeof(clientAddress);
 
-  for(;;) {
-    int acceptedSocketDescriptor = 
-          accept(socketDescriptor, 
-                 (struct sockaddr *) &clientAddress, 
-                 &len);
+  threadData *data;
 
-    if(acceptedSocketDescriptor == -1) {
+  for(;;) {
+    data = (threadData*)malloc(sizeof(threadData));
+    data->message = strdup(message); 
+    data->acceptedSocket = accept(socketDescriptor, 
+                                  (struct sockaddr *) &data->clientAddress, 
+                                  &len);
+
+    if(data->acceptedSocket == -1) {
       perror("failure accepting socket");
-      close(acceptedSocketDescriptor);
+      close(data->acceptedSocket);
       continue;
     }
  
     pthread_t pth;
-    threadData data = {acceptedSocketDescriptor, clientAddress, message};
 
-    if((rc = pthread_create(&pth, NULL, threadFunc, &data))) {
+    if((rc = pthread_create(&pth, NULL, threadFunc, data))) {
       perror("failure creating thread");
-      close(acceptedSocketDescriptor);
+      close(data->acceptedSocket);
       continue;
     }
-
-    //pthread_join(pth, NULL);
   }
 }
 
