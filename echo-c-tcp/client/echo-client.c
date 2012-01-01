@@ -13,7 +13,6 @@
 #include "../common.h"
 
 struct settings settings;
-struct audit audit;
 
 typedef struct client_thread_data {
   char *host;
@@ -28,6 +27,7 @@ void *client_thread(void *arg) {
   client_thread_data_t *data = (client_thread_data_t *) arg;
 
   struct sockaddr_in serverAddress;
+  struct audit audit;
   audit.success = 0;
   audit.failure = 0;
 
@@ -40,17 +40,17 @@ void *client_thread(void *arg) {
   serverAddress.sin_port = htons(data->port);
   serverAddress.sin_addr.s_addr = inet_addr(data->host);
 
-  int socketDescriptor = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if(-1 == connect(socketDescriptor, 
+  int sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if(-1 == connect(sd, 
         (struct sockaddr *) &serverAddress, 
         sizeof(serverAddress))) {
     perror("connection failure");
-    close(socketDescriptor);
+    close(sd);
     pthread_exit(NULL);
   }
   
   int flag = 1;
-  setsockopt(socketDescriptor, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+  setsockopt(sd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
 
   size_t length;
   uint32_t nlength, nid, ack_id, ack_nid;
@@ -66,7 +66,7 @@ void *client_thread(void *arg) {
     length = strlen(message);
     nlength = htonl(length);
 
-    if((numbytes = send(socketDescriptor, &nlength, 4, 0)) == -1) {
+    if((numbytes = send(sd, &nlength, 4, 0)) == -1) {
       perror("send message size failure");
       audit.failure++;
       break;
@@ -74,21 +74,21 @@ void *client_thread(void *arg) {
 
     // send message id
     nid = htonl(id);
-    if((numbytes = send(socketDescriptor, &nid, 4, 0)) == -1) {
+    if((numbytes = send(sd, &nid, 4, 0)) == -1) {
       perror("send message id failure");
       audit.failure++;
       break;
     }
 
     // send message
-    if((numbytes = send(socketDescriptor, message, length, 0)) == -1) {
+    if((numbytes = send(sd, message, length, 0)) == -1) {
       perror("send message failure");
       audit.failure++;
       break;
     }
 
     /* get response (message id) */
-    if((numbytes = recv(socketDescriptor, &ack_nid, 4, MSG_WAITALL)) == -1) {
+    if((numbytes = recv(sd, &ack_nid, 4, MSG_WAITALL)) == -1) {
       perror("recv id failure");
       audit.failure++;
       break;
@@ -107,13 +107,13 @@ void *client_thread(void *arg) {
   /* close the message stream by sending a zero length message */
   length = 0;
   nlength = htonl(length);
-  if((numbytes = send(socketDescriptor, &nlength, 4, 0)) == -1) {
+  if((numbytes = send(sd, &nlength, 4, 0)) == -1) {
       perror("send message size failure");
-      close(socketDescriptor);
+      close(sd);
       pthread_exit(NULL);
   }
 
-  close(socketDescriptor);
+  close(sd);
 
   printf("%lu messages send succesful by thread %d\n", audit.success, data->thread_id); 
   printf("%lu messages failed\n", audit.failure); 
@@ -134,16 +134,15 @@ void echo_client(char *host, int port, char *message, long count, int number_of_
     data[i].message = strdup(message);
     data[i].count = count;
     data[i].thread_id = i;
-    
+
     if((rc = pthread_create(&pth[i], NULL, client_thread, &data[i]))) {
       perror("failure creating thread");
       continue;
     }
-
-    /* wait for every htread to finish */
-    for(int i = 0; i < number_of_threads; i++) {
-      pthread_join(pth[i], NULL);
-    }
+  }
+  /* wait for every htread to finish */
+  for(int i = 0; i < number_of_threads; i++) {
+    pthread_join(pth[i], NULL);
   }
 }
 

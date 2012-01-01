@@ -13,21 +13,20 @@
 
 struct settings settings;
 
-typedef struct thread_data {
+typedef struct server_thread_data {
   int acceptedSocket;
-  struct sockaddr_in clientAddress;
+  struct sockaddr_in client_address;
   char *message;
-} threadData;
+} server_thread_data_t;
 
-void *threadFunc(void *arg) {
+void *server_thread(void *arg) {
         
     long numMessages = 0;
-    threadData *data = (threadData *) arg;
+    server_thread_data_t *data = (server_thread_data_t *) arg;
 
     char addr[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(data->clientAddress.sin_addr), addr, INET_ADDRSTRLEN); 
+    inet_ntop(AF_INET, &(data->client_address.sin_addr), addr, INET_ADDRSTRLEN); 
     printf("Connection accepted from: %s \n", addr);
-
 
     int numbytes = 0;
     uint32_t length, nlength, id, nid;
@@ -83,38 +82,38 @@ void *threadFunc(void *arg) {
 int echo_server(char *host, int port, char *message) {
 
   int rc;
-  struct sockaddr_in serverAddress, clientAddress;
+  struct sockaddr_in serverAddress, client_address;
 
-  int socketDescriptor = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
   bzero((void *)&serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET;                            
   serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);                               
   serverAddress.sin_port = htons(port);
 
-  if(-1 == bind(socketDescriptor, 
+  if(-1 == bind(sd, 
                 (struct sockaddr *)&serverAddress, 
                 sizeof(serverAddress))) {
     perror("bind error");
-    close(socketDescriptor);
+    close(sd);
     exit(EXIT_FAILURE);
   }
 
-  if(-1 == listen(socketDescriptor, 5)) {
+  if(-1 == listen(sd, 5)) {
     perror("listen error");
-    close(socketDescriptor);
+    close(sd);
     exit(EXIT_FAILURE);
   }
 
-  socklen_t len = sizeof(clientAddress);
+  socklen_t len = sizeof(client_address);
 
-  threadData *data;
+  server_thread_data_t *data;
 
   for(;;) {
-    data = (threadData*)malloc(sizeof(threadData));
+    data = (server_thread_data_t*)malloc(sizeof(server_thread_data_t));
     data->message = strdup(message); 
-    data->acceptedSocket = accept(socketDescriptor, 
-                                  (struct sockaddr *) &data->clientAddress, 
+    data->acceptedSocket = accept(sd, 
+                                  (struct sockaddr *) &data->client_address, 
                                   &len);
 
     if(data->acceptedSocket == -1) {
@@ -125,7 +124,7 @@ int echo_server(char *host, int port, char *message) {
  
     pthread_t pth;
 
-    if((rc = pthread_create(&pth, NULL, threadFunc, data))) {
+    if((rc = pthread_create(&pth, NULL, server_thread, data))) {
       perror("failure creating thread");
       close(data->acceptedSocket);
       continue;
