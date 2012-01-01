@@ -6,6 +6,7 @@ struct settings {
     char *host;
     char *message; /* answer to send to client */
     bool verbose;
+    bool sctp;
 };
 
 #endif 

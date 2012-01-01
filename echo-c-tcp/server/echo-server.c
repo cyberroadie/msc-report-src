@@ -84,7 +84,12 @@ int echo_server(char *host, int port, char *message) {
   int rc;
   struct sockaddr_in serverAddress, client_address;
 
-  int sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int sd;
+  if(settings.sctp) {
+    sd = socket(PF_INET, SOCK_STREAM, IPPROTO_SCTP);
+  } else {
+    sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  }
 
   bzero((void *)&serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET;                            
@@ -145,6 +150,7 @@ static void settings_init(void) {
   settings.port = 4242;
   settings.message = "recv";
   settings.verbose= false;
+  settings.sctp = false;
 }
 
 int main(int argc, char **argv) {
@@ -160,6 +166,7 @@ int main(int argc, char **argv) {
           "m:"
           "c:"
           "b:"
+          "s"
           "v"
           ))) {
     switch (c) {
@@ -177,6 +184,9 @@ int main(int argc, char **argv) {
         break;
       case 'v':
         settings.verbose = true;
+        break;
+      case 's':
+        settings.sctp = true;
         break;
       default:
         fprintf(stderr, "Illegal argument \"%c\"\n", c);

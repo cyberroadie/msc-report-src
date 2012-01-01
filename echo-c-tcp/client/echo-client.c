@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h> /* TCP_NODELAY lives here */
+#include <netinet/sctp.h> /* SCTP_NODELAY lives here */
 #include <pthread.h>
 #include <stdbool.h>
 #include "echo-client.h"
@@ -40,7 +41,13 @@ void *client_thread(void *arg) {
   serverAddress.sin_port = htons(data->port);
   serverAddress.sin_addr.s_addr = inet_addr(data->host);
 
-  int sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int sd;
+  if(settings.sctp) {
+    sd = socket(PF_INET, SOCK_STREAM, IPPROTO_SCTP);
+  } else {
+    sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+  }
+
   if(-1 == connect(sd, 
         (struct sockaddr *) &serverAddress, 
         sizeof(serverAddress))) {
@@ -48,9 +55,29 @@ void *client_thread(void *arg) {
     close(sd);
     pthread_exit(NULL);
   }
-  
+
+  if(settings.sctp && settings.verbose) {
+    struct sockaddr_in *paddrs[10];
+    /*Get Peer Addresses*/
+    int addr_count = sctp_getpaddrs(sd, 0, (struct sockaddr**)paddrs);
+    printf("\nPeer addresses: %d\n", addr_count);
+
+    /*Print Out Addresses*/
+    for(int i = 0; i < addr_count; i++)
+      printf("Address %d: %s:%d\n", 
+             i +1, 
+             inet_ntoa((*paddrs)[i].sin_addr), 
+             (*paddrs)[i].sin_port);
+    sctp_freepaddrs((struct sockaddr*)*paddrs);
+  }
+
+
   int flag = 1;
-  setsockopt(sd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+  if(settings.sctp) {
+    setsockopt(sd, IPPROTO_SCTP, SCTP_NODELAY, (char*)&flag, sizeof(flag));
+  } else {
+    setsockopt(sd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag));
+  }
 
   size_t length;
   uint32_t nlength, nid, ack_id, ack_nid;
@@ -180,6 +207,7 @@ int main(int argc, char **argv) {
           "c:"
           "n:"
           "b:"
+          "s"
           "v"
           ))) {
     switch (c) {
@@ -203,6 +231,9 @@ int main(int argc, char **argv) {
         break;
       case 'b':
         settings.bufsize = atoi(optarg);
+        break;
+      case 's':
+        settings.sctp = true;
         break;
       case 'v':
         settings.verbose = true;
