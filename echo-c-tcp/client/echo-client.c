@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h> /* TCP_NODELAY lives here */
+#include <pthread.h>
 #include <stdbool.h>
 #include "echo-client.h"
 #include "../common.h"
@@ -14,16 +15,30 @@
 struct settings settings;
 struct audit audit;
 
-void echo_client(char *host, int port, char *message, long count) {
+typedef struct client_thread_data {
+  char *host;
+  int port;
+  char *message;
+  long count;
+  int thread_id;
+} client_thread_data_t;
+
+void *client_thread(void *arg) {
+
+  client_thread_data_t *data = (client_thread_data_t *) arg;
 
   struct sockaddr_in serverAddress;
   audit.success = 0;
   audit.failure = 0;
 
+  /* keep data local to thread */
+  char *message = strdup(data->message);
+  int count = data->count;
+
   bzero((void *)&serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET; 
-  serverAddress.sin_port = htons(port);
-  serverAddress.sin_addr.s_addr = inet_addr(host);
+  serverAddress.sin_port = htons(data->port);
+  serverAddress.sin_addr.s_addr = inet_addr(data->host);
 
   int socketDescriptor = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(-1 == connect(socketDescriptor, 
@@ -31,7 +46,7 @@ void echo_client(char *host, int port, char *message, long count) {
         sizeof(serverAddress))) {
     perror("connection failure");
     close(socketDescriptor);
-    exit(EXIT_FAILURE);  
+    pthread_exit(NULL);
   }
   
   int flag = 1;
@@ -41,11 +56,11 @@ void echo_client(char *host, int port, char *message, long count) {
   uint32_t nlength, nid, ack_id, ack_nid;
   ssize_t numbytes;
 
-  printf("start sending %lu messages\n", count);
+  printf("thread %d start sending %d messages\n", data->thread_id, count);
 
   for(uint32_t id = 0; id < count; id++) {
 
-    if(settings.verbose) printf("sending message %lu\n", id);
+    if(settings.verbose) printf("sending message %d\n", id);
 
     // send size of message
     length = strlen(message);
@@ -81,7 +96,7 @@ void echo_client(char *host, int port, char *message, long count) {
 
     ack_id = ntohl(ack_nid);
     if(ack_id != id) {
-      printf("ack_id: %lu != id: %lu\n", ack_id, id);
+      printf("ack_id: %d != id: %d\n", ack_id, id);
       break;
     }
 
@@ -95,22 +110,49 @@ void echo_client(char *host, int port, char *message, long count) {
   if((numbytes = send(socketDescriptor, &nlength, 4, 0)) == -1) {
       perror("send message size failure");
       close(socketDescriptor);
-      exit(EXIT_FAILURE);
+      pthread_exit(NULL);
   }
 
   close(socketDescriptor);
 
-  printf("%lu messages send succesful\n", audit.success); 
+  printf("%lu messages send succesful by thread %d\n", audit.success, data->thread_id); 
   printf("%lu messages failed\n", audit.failure); 
 
-  exit(EXIT_SUCCESS);
+  pthread_exit(NULL);
+}
+
+void echo_client(char *host, int port, char *message, long count, int number_of_threads) {
+
+  int rc;
+  client_thread_data_t data[number_of_threads];
+  pthread_t pth[number_of_threads];
+
+  for(int i = 0; i < number_of_threads; i++) {
+    //data = (client_thread_data_t*)malloc(sizeof(client_thread_data_t));
+    data[i].host = strdup(host);
+    data[i].port = port;
+    data[i].message = strdup(message);
+    data[i].count = count;
+    data[i].thread_id = i;
+    
+    if((rc = pthread_create(&pth[i], NULL, client_thread, &data[i]))) {
+      perror("failure creating thread");
+      continue;
+    }
+
+    /* wait for every htread to finish */
+    for(int i = 0; i < number_of_threads; i++) {
+      pthread_join(pth[i], NULL);
+    }
+  }
 }
 
 static void usage(void) {
-  printf("-i <ip address/hostname>      server to connect to (default: localhost)\n"
+  printf("-i <ip address/hostname>   server to connect to (default: localhost)\n"
       "-p <port number>              port number to connect to (default: 4242)\n"
       "-m <message>                  message to send (default: hello)\n"
-      "-c <count>                    number of messages to send (default: 1)\n"
+      "-c <number of messages>      (default: 1)\n"
+      "-n <number of threads>       (default: 1)\n" 
       );
   return;
 }
@@ -120,6 +162,7 @@ static void settings_init(void) {
   settings.port = 4242;
   settings.message = "hello";
   settings.count = 1;
+  settings.no_of_threads = 1;
   settings.bufsize = 4096;
   settings.verbose= false;
 }
@@ -136,6 +179,7 @@ int main(int argc, char **argv) {
           "p:"
           "m:"
           "c:"
+          "n:"
           "b:"
           "v"
           ))) {
@@ -155,6 +199,9 @@ int main(int argc, char **argv) {
       case 'c':
         settings.count = atol(optarg);
         break;
+      case 'n':
+        settings.no_of_threads= atoi(optarg);
+        break;
       case 'b':
         settings.bufsize = atoi(optarg);
         break;
@@ -166,7 +213,7 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
   }
-  echo_client(settings.host, settings.port, settings.message, settings.count);
+  echo_client(settings.host, settings.port, settings.message, settings.count, settings.no_of_threads);
 }
 
 

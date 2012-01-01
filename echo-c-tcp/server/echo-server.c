@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h> /* optarg */
 #include <netinet/in.h> 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include "echo-server.h"
@@ -50,7 +51,7 @@ void *threadFunc(void *arg) {
       }
 
       id = ntohl(nid);
-      if(settings.verbose) printf("message %lu received\n", id);
+      if(settings.verbose) printf("message %d received\n", id);
 
       /* get message */
       char *msg;
