@@ -145,7 +145,7 @@ static void usage(void) {
   return;
 }
 
-static void settings_init(void) {
+static void settingsInit(void) {
   settings.host = "0.0.0.0";
   settings.port = 4242;
   settings.message = "recv";
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 
   int c;
 
-  settings_init();
+  settingsInit();
 
   while (-1 != (c = getopt(argc, argv,
           "h:"
