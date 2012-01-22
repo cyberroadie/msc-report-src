@@ -15,17 +15,17 @@
 
 struct settings settings;
 
-typedef struct client_thread_data {
+typedef struct messageSender_data {
   char *host;
   int port;
   char *message;
   long count;
   int thread_id;
-} client_thread_data_t;
+} messageSenderData_t;
 
-void *client_thread(void *arg) {
+void *messageSender(void *arg) {
 
-  client_thread_data_t *data = (client_thread_data_t *) arg;
+  messageSenderData_t *data = (messageSenderData_t *) arg;
 
   struct sockaddr_in serverAddress;
   struct audit audit;
@@ -148,21 +148,21 @@ void *client_thread(void *arg) {
   pthread_exit(NULL);
 }
 
-void echo_client(char *host, int port, char *message, long count, int number_of_threads) {
+void echoClient(char *host, int port, char *message, long count, int number_of_threads) {
 
   int rc;
-  client_thread_data_t data[number_of_threads];
+  messageSenderData_t data[number_of_threads];
   pthread_t pth[number_of_threads];
 
   for(int i = 0; i < number_of_threads; i++) {
-    //data = (client_thread_data_t*)malloc(sizeof(client_thread_data_t));
+    //data = (messageSenderData_t*)malloc(sizeof(messageSenderData_));
     data[i].host = strdup(host);
     data[i].port = port;
     data[i].message = strdup(message);
     data[i].count = count;
     data[i].thread_id = i;
 
-    if((rc = pthread_create(&pth[i], NULL, client_thread, &data[i]))) {
+    if((rc = pthread_create(&pth[i], NULL, messageSender, &data[i]))) {
       perror("failure creating thread");
       continue;
     }
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
   }
-  echo_client(settings.host, settings.port, settings.message, settings.count, settings.no_of_threads);
+  echoClient(settings.host, settings.port, settings.message, settings.count, settings.no_of_threads);
 }
 
 
