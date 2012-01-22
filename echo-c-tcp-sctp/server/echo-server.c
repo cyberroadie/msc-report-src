@@ -13,16 +13,16 @@
 
 struct settings settings;
 
-typedef struct server_thread_data {
+typedef struct handleClientData {
   int acceptedSocket;
   struct sockaddr_in client_address;
   char *message;
-} server_thread_data_t;
+} handleClientData_t;
 
-void *server_thread(void *arg) {
+void *handleClient(void *arg) {
         
     long numMessages = 0;
-    server_thread_data_t *data = (server_thread_data_t *) arg;
+    handleClientData_t *data = (handleClientData_t *) arg;
 
     char addr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(data->client_address.sin_addr), addr, INET_ADDRSTRLEN); 
@@ -79,7 +79,7 @@ void *server_thread(void *arg) {
     pthread_exit(NULL);
 }
 
-int echo_server(char *host, int port, char *message) {
+int echoServer(char *host, int port, char *message) {
 
   int rc;
   struct sockaddr_in serverAddress, client_address;
@@ -112,10 +112,10 @@ int echo_server(char *host, int port, char *message) {
 
   socklen_t len = sizeof(client_address);
 
-  server_thread_data_t *data;
+  handleClientData_t *data;
 
   for(;;) {
-    data = (server_thread_data_t*)malloc(sizeof(server_thread_data_t));
+    data = (handleClientData_t*)malloc(sizeof(handleClientData_t));
     data->message = strdup(message); 
     data->acceptedSocket = accept(sd, 
                                   (struct sockaddr *) &data->client_address, 
@@ -129,7 +129,7 @@ int echo_server(char *host, int port, char *message) {
  
     pthread_t pth;
 
-    if((rc = pthread_create(&pth, NULL, server_thread, data))) {
+    if((rc = pthread_create(&pth, NULL, handleClient, data))) {
       perror("failure creating thread");
       close(data->acceptedSocket);
       continue;
@@ -193,5 +193,5 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
   }
-  echo_server(settings.host, settings.port, settings.message);
+  echoServer(settings.host, settings.port, settings.message);
 }
