@@ -10,7 +10,7 @@
 #include <netinet/sctp.h> /* SCTP_NODELAY lives here */
 #include <pthread.h>
 #include <stdbool.h>
-#include "echo-client.h"
+#include "echoClient.h"
 #include "../common.h"
 
 struct settings settings;

@@ -4,5 +4,5 @@ PROJECT("echo server")
 SET(CMAKE_C_FLAGS "-std=c99 -pthread -Wall")
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
-ADD_EXECUTABLE(echo-server echo-server.c)
+ADD_EXECUTABLE(echoServer echoServer.c)
 

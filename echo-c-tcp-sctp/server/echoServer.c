@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include "echo-server.h"
+#include "echoServer.h"
 #include "../common.h"
 
 struct settings settings;
