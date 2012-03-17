@@ -25,6 +25,25 @@ var (
         }
 )
 
+func echoServer(Address *string, Message *string) {
+	var netlisten net.Listener
+	var err error
+
+	netlisten, err = net.Listen("sctp", *settings.Address)
+
+	if err != nil {
+		log.Printf("Error listening: %s", err)
+		os.Exit(-1)
+	}
+
+	defer netlisten.Close()
+
+	for {
+		netListen.SctpReceiveMsg();
+	}
+
+}
+
 func main() {
         flag.Parse()
         echoServer(settings.Address, settings.Message)
