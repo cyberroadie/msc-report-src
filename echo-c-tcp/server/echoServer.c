@@ -91,6 +91,11 @@ int echoServer(char *host, int port, char *message) {
     sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
   }
 
+  if(sd == -1) {
+    perror("failure creating socket");
+    exit(EXIT_FAILURE);
+  }
+
   bzero((void *)&serverAddress, sizeof(serverAddress));
   serverAddress.sin_family = AF_INET;                            
   serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);                               
@@ -139,8 +144,10 @@ int echoServer(char *host, int port, char *message) {
 
 static void usage(void) {
   printf("-i <ip address/hostname>      server to connect to (default: 0.0.0.0)\n"
-      "-p <port number>              port number to connect on (default: 4242)\n"
-      "-m <message>                  message to send (default: recv)\n"
+         "-p <port number>              port number to connect on (default: 4243)\n"
+         "-m <message>                  message to send (default: recv)\n"
+         "-v                            verbose\n"
+         "-s <false>                    use sctp\n"
       );
   return;
 }
