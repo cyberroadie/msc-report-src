@@ -1,0 +1,4 @@
+cmake
+cscope.out
+tags
+*.swp

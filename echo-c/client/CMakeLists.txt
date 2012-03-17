@@ -1,8 +1,0 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-PROJECT("echo client")
-
-SET(CMAKE_C_FLAGS "-std=c99 -pthread -Wall")
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-
-ADD_EXECUTABLE(echoClient echoClient.c)
-
