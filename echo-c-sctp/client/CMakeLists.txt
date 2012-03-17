@@ -4,8 +4,8 @@ PROJECT("echo client")
 SET(CMAKE_C_FLAGS "-std=c99 -pthread -Wall")
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
-ADD_EXECUTABLE(echoClient echoClient.c)
+ADD_EXECUTABLE(echoSCTPClient echoClient.c)
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  TARGET_LINK_LIBRARIES(echoClient /usr/lib/libsctp.dylib)
+  TARGET_LINK_LIBRARIES(echoSCTPClient /usr/lib/libsctp.dylib)
 ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
