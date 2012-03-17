@@ -179,6 +179,7 @@ static void usage(void) {
       "-m <message>                  message to send (default: hello)\n"
       "-c <number of messages>      (default: 1)\n"
       "-n <number of threads>       (default: 1)\n" 
+      "-s                           SCTP (default TCP)\n" 
       );
   return;
 }
@@ -200,7 +201,7 @@ int main(int argc, char **argv) {
   settings_init();
 
   while (-1 != (c = getopt(argc, argv,
-          "h:"
+          "h"
           "i:"
           "p:"
           "m:"

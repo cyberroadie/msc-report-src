@@ -7,7 +7,6 @@ import (
         "net"
         "log"
         "io"
-        "os"
         "encoding/binary"
 )
 
@@ -72,7 +71,7 @@ func messageSender(address *string, message *string, count int, done chan bool) 
                 }
 
                 // Get message id
-                if n, err := io.ReadFull(conn, idBytesReceived); n == 0 && err == os.EOF {
+                if n, err := io.ReadFull(conn, idBytesReceived); n == 0 && err == io.EOF {
                         break
                 } else if err != nil {
                         log.Printf("read id: %s (after %d bytes)", err, n)
