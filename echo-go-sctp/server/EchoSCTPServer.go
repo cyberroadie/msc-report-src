@@ -39,7 +39,7 @@ func echoServer(Address *string, Message *string) {
 	defer netlisten.Close()
 
 	for {
-		netListen.SctpReceiveMsg();
+		msg := netListen.ReceiveMsg();
 	}
 
 }
