@@ -24,10 +24,10 @@ int echoServer(char *host, int port, char *message) {
 
   int sd;
 
-  sd = socket(PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+  sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
   
   if(sd == -1) {
-    perror("failure opening socket");
+    perror("failure opeing socket");
     exit(EXIT_FAILURE);
   }
 
@@ -59,49 +59,26 @@ int echoServer(char *host, int port, char *message) {
 
   printf("listening on port %d\n", port);
 
-  // Structure containing data
-  struct iovec iov[1];
-  char buf[RECVBUFSIZE];
-  iov->iov_base = buf;
-  iov->iov_len = RECVBUFSIZE;
-
-  // Create buffer for message control
-  struct sctp_sndinfo *sinfo;
-  struct cmsghdr *cmsg;
-  char cbuf[sizeof (*cmsg) + sizeof (*sinfo)];
-  bzero(cbuf, sizeof (*cmsg) + sizeof (*sinfo));
-  cmsg = (struct cmsghdr *)cbuf;
-  sinfo = (struct sctp_sndinfo *)(cmsg + 1);
-
-  // Message header
-  struct msghdr msg[1];
-  bzero(msg, sizeof(msg));
-  msg->msg_iov = iov;
-  msg->msg_iovlen = 1;
- 
-  union sctp_notification *snp;
+  int flags, n;
+  struct sockaddr_in clientAddress;
+  struct sctp_sndrcvinfo info;
+  socklen_t len;
+  char buffer[RECVBUFSIZE + 1] = {0};
 
   for(;;) {
+    flags = 0;
+    bzero((void*)&clientAddress, sizeof(clientAddress));
+    bzero((void*)&info, sizeof(info));
+    len = (socklen_t)sizeof(struct sockaddr_in);
 
-    size_t length = recvmsg(sd, msg, 0);
-    if (msg->msg_flags & MSG_NOTIFICATION) {
-      snp = (union sctp_notification *)buf;
-      printf("[ Receive notification type %u ]\n",
-          snp->sn_header.sn_type);
-      continue;
-    }
-
-    if(length == -1) {
+    n = sctp_recvmsg(sd, (void*)buffer, RECVBUFSIZE,
+                     (struct sockaddr *)&clientAddress, &len, &info, &flags);
+    if(n == -1) {
       perror("error receiving message: ");
       continue;
     }
     
-    printf("[ Receive echo (%u bytes): stream = %hu, "
-        "flags = %hx, ppid = %u ]\n", length,
-        sinfo->snd_sid, sinfo->snd_flags,
-        sinfo->snd_ppid);
-   
-    printf("message received: %s\n", buf);
+    printf("message received: %s\n", buffer);
 
   }
 

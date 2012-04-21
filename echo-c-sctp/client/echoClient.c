@@ -27,12 +27,12 @@ struct settings settings;
 void *messageSender(void *arg) {
 
   messageSenderData_t *data = (messageSenderData_t *) arg;
-
   char *message = strdup(data->message);
+
   int count = data->count;
   int sd;
 
-  sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+  sd = socket(PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
   
   if(sd == -1) {
     perror("failure opeing socket");
@@ -49,7 +49,40 @@ void *messageSender(void *arg) {
   initmsg.sinit_num_ostreams = 1;
   setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg));
 
+  // Structure containing data
+  struct iovec iov[1];
+  iov->iov_base = message;
+  iov->iov_len = sizeof(message);
+
+  // Create buffer for message control
+  struct sctp_sndinfo *sinfo;
+  struct cmsghdr *cmsg;
+  char cbuf[sizeof (*cmsg) + sizeof (*sinfo)];
+  bzero(cbuf, sizeof (*cmsg) + sizeof (*sinfo));
+  cmsg = (struct cmsghdr *)cbuf;
+  sinfo = (struct sctp_sndinfo *)(cmsg + 1);
+
+  // Send information structure
+  sinfo->snd_sid = 0;
+  sinfo->snd_ppid = 1;
+
+  // Message control
+  cmsg->cmsg_len = sizeof(*cmsg) + sizeof(*sinfo); 
+  cmsg->cmsg_level = IPPROTO_SCTP;
+  cmsg->cmsg_type  = SCTP_SNDRCV;
+
+  // Message header
+  struct msghdr msg[1];
+  bzero(msg, sizeof(msg));
+  msg->msg_iov = iov;
+  msg->msg_iovlen = 1;
+  msg->msg_name = (struct sockaddr *)&address;
+  msg->msg_namelen = sizeof(address);
+  msg->msg_control = cbuf;
+
   for(int i = 0; i < count; i++) {
+    sendmsg(sd, msg, 0);
+
     sctp_sendmsg(sd, message, sizeof(message), 
                  (struct sockaddr *)&address, sizeof(address),
                  htonl(PPID),
