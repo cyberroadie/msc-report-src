@@ -66,12 +66,12 @@ int echoServer(char *host, int port, char *message) {
   iov->iov_len = RECVBUFSIZE;
 
   // Create buffer for message control
-  struct sctp_sndinfo *sinfo;
+  struct sctp_rcvinfo *rinfo;
   struct cmsghdr *cmsg;
-  char cbuf[sizeof (*cmsg) + sizeof (*sinfo)];
-  bzero(cbuf, sizeof (*cmsg) + sizeof (*sinfo));
+  char cbuf[sizeof (*cmsg) + sizeof (*rinfo)];
+  bzero(cbuf, sizeof (*cmsg) + sizeof (*rinfo));
   cmsg = (struct cmsghdr *)cbuf;
-  sinfo = (struct sctp_sndinfo *)(cmsg + 1);
+  rinfo = (struct sctp_sndinfo *)(cmsg + 1);
 
   // Message header
   struct msghdr msg[1];
@@ -98,8 +98,8 @@ int echoServer(char *host, int port, char *message) {
     
     printf("[ Receive echo (%u bytes): stream = %hu, "
         "flags = %hx, ppid = %u ]\n", length,
-        sinfo->snd_sid, sinfo->snd_flags,
-        sinfo->snd_ppid);
+        rinfo->rcv_sid, rinfo->rcv_flags,
+        rinfo->rcv_ppid);
    
     printf("message received: %s\n", buf);
 
