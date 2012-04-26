@@ -6,8 +6,9 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netinet/tcp.h> /* TCP_NODELAY lives here */
-#include <netinet/sctp.h> /* SCTP_NODELAY lives here */
+#include <netinet/tcp.h> 
+#include <netinet/sctp.h> 
+#include <netinet/sctp_uio.h> 
 #include <pthread.h>
 #include <stdbool.h>
 #include "echoClient.h"
@@ -52,19 +53,22 @@ void *messageSender(void *arg) {
   // Structure containing data
   struct iovec iov[1];
   iov->iov_base = message;
-  iov->iov_len = sizeof(message);
+  iov->iov_len = strlen(message);
 
   // Create buffer for message control
   struct sctp_sndinfo *sinfo;
   struct cmsghdr *cmsg;
-  char cbuf[sizeof (*cmsg) + sizeof (*sinfo)];
+  //char cbuf[sizeof (*cmsg) + sizeof (*sinfo)];
+  char cbuf[sizeof (struct cmsghdr) + sizeof (struct sctp_sndinfo)];
   bzero(cbuf, sizeof (*cmsg) + sizeof (*sinfo));
   cmsg = (struct cmsghdr *)cbuf;
   sinfo = (struct sctp_sndinfo *)(cmsg + 1);
 
+  memcpy(CMSG_DATA(cmsg), &sinfo, sizeof(struct sctp_sndinfo));
+
   // Send information structure
-  sinfo->snd_sid = 0;
-  sinfo->snd_ppid = 1;
+  sinfo->snd_sid = 2;
+  sinfo->snd_ppid = 424242;
 
   // Message control
   cmsg->cmsg_len = sizeof(*cmsg) + sizeof(*sinfo); 
@@ -79,17 +83,13 @@ void *messageSender(void *arg) {
   msg->msg_name = (struct sockaddr *)&address;
   msg->msg_namelen = sizeof(address);
   msg->msg_control = cbuf;
+  msg->msg_controllen = sizeof(cbuf);
 
   for(int i = 0; i < count; i++) {
-    sendmsg(sd, msg, 0);
-
-    sctp_sendmsg(sd, message, sizeof(message), 
-                 (struct sockaddr *)&address, sizeof(address),
-                 htonl(PPID),
-                 0, /* flags */
-                 0, /* stream no */
-                 0, /* time to live */
-                 0); /* context */
+    sctp_sendv(sd, (const struct iovec *) iov, 1, (struct sockaddr *) &address, 1, (void *) sinfo, (socklen_t) sizeof(sinfo), SCTP_SENDV_SNDINFO, 0);
+    //sendmsg(sd, msg, 0);
+    //sctp_sendv(int, const struct iovec *, int, struct sockaddr *, int, void *, socklen_t, unsigned int, int))
+    //sctp_sendv __P((int, const struct iovec *, int, struct sockaddr *, int, void *, socklen_t, unsigned int, int));
   } 
 
 }
