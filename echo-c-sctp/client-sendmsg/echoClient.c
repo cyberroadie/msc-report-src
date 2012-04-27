@@ -41,7 +41,7 @@ void *messageSender(void *arg) {
   }
   
   struct sctp_initmsg initmsg = {0};
-  initmsg.sinit_num_ostreams = 100;
+  initmsg.sinit_num_ostreams = 4;
   int s = setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg));
   if(s == -1) {
     perror("Error setting socket options");
@@ -66,15 +66,47 @@ void *messageSender(void *arg) {
 
   // Send information structure
   sinfo.snd_sid = 1;
-  sinfo.snd_ppid = htonl(424242);
+  sinfo.snd_ppid = 424242;
+
+  char *cmsgbuf;
+  int addrcnt = 1;
+  cmsgbuf = malloc(CMSG_SPACE(sizeof(struct sctp_sndinfo)) +
+                   CMSG_SPACE(sizeof(struct sctp_prinfo)) +
+                   CMSG_SPACE(sizeof(struct sctp_authinfo)) +
+                   addrcnt * CMSG_SPACE(sizeof(struct in6_addr)));
+
+  struct msghdr msg;
+  struct cmsghdr *cmsg;
+  msg.msg_control = cmsgbuf;
+  msg.msg_controllen = 0;
+  cmsg = (struct cmsghdr *)cmsgbuf;
+
+  cmsg->cmsg_level = IPPROTO_SCTP;
+  cmsg->cmsg_type = SCTP_SNDINFO;
+  cmsg->cmsg_len = CMSG_LEN(sizeof(struct sctp_sndinfo));
+  memcpy(CMSG_DATA(cmsg), &sinfo, sizeof(struct sctp_sndinfo));
+  msg.msg_controllen += CMSG_SPACE(sizeof(struct sctp_sndinfo));
+  cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_sndinfo)));
+
+  msg.msg_name = &address;
+  msg.msg_namelen = (socklen_t) sizeof(struct sockaddr_in);
+
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_flags = 0;
 
   for(int i = 0; i < count; i++) {
+    //int n = sendmsg(sd, &msg, 1);
     int n = sctp_sendv(sd, &iov, 1, (struct sockaddr *) &address, 1, (void *) &sinfo, sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0);
     if(n == -1) {
       perror("failure sending message");
       exit(EXIT_FAILURE);
     }
+    //sendmsg(sd, msg, 0);
+    //sctp_sendv(int, const struct iovec *, int, struct sockaddr *, int, void *, socklen_t, unsigned int, int))
+    //sctp_sendv __P((int, const struct iovec *, int, struct sockaddr *, int, void *, socklen_t, unsigned int, int));
   } 
+
 }
 
 static void settings_init(void) {

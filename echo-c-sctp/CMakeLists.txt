@@ -3,4 +3,5 @@ project(msc-project-src)
 
 add_subdirectory(client-sctp_sendv)
 add_subdirectory(client-sendmsg)
-add_subdirectory(server)
+add_subdirectory(server-recvmsg)
+add_subdirectory(server-sctp_recvv)

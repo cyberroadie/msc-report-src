@@ -6,9 +6,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netinet/tcp.h> 
-#include <netinet/sctp.h> 
-#include <netinet/sctp_uio.h> 
+#include <netinet/tcp.h> /* TCP_NODELAY lives here */
+#include <netinet/sctp.h> /* SCTP_NODELAY lives here */
 #include <pthread.h>
 #include <stdbool.h>
 #include "echoClient.h"
@@ -28,23 +27,15 @@ struct settings settings;
 void *messageSender(void *arg) {
 
   messageSenderData_t *data = (messageSenderData_t *) arg;
-  char *message = strdup(data->message);
 
+  char *message = strdup(data->message);
   int count = data->count;
   int sd;
 
-  sd = socket(PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+  sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
   
   if(sd == -1) {
     perror("failure opeing socket");
-    exit(EXIT_FAILURE);
-  }
-  
-  struct sctp_initmsg initmsg = {0};
-  initmsg.sinit_num_ostreams = 100;
-  int s = setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg));
-  if(s == -1) {
-    perror("Error setting socket options");
     exit(EXIT_FAILURE);
   }
 
@@ -53,28 +44,21 @@ void *messageSender(void *arg) {
   address.sin_family = AF_INET;
   address.sin_port = htons(data->port);
   address.sin_addr.s_addr = inet_addr(data->host);
-  address.sin_len = (socklen_t) sizeof(struct sockaddr_in);
 
-  // Structure containing data
-  struct iovec iov;
-  bzero(&iov, sizeof(iov));
-  iov.iov_base = message;
-  iov.iov_len = strlen(message);
-
-  struct sctp_sndinfo sinfo;
-  bzero(&sinfo, sizeof(struct sctp_sndinfo));
-
-  // Send information structure
-  sinfo.snd_sid = 1;
-  sinfo.snd_ppid = htonl(424242);
+  struct sctp_initmsg initmsg = {0};
+  initmsg.sinit_num_ostreams = 1;
+  setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg));
 
   for(int i = 0; i < count; i++) {
-    int n = sctp_sendv(sd, &iov, 1, (struct sockaddr *) &address, 1, (void *) &sinfo, sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0);
-    if(n == -1) {
-      perror("failure sending message");
-      exit(EXIT_FAILURE);
-    }
+    sctp_sendmsg(sd, message, sizeof(message), 
+                 (struct sockaddr *)&address, sizeof(address),
+                 htonl(PPID),
+                 0, /* flags */
+                 0, /* stream no */
+                 0, /* time to live */
+                 0); /* context */
   } 
+
 }
 
 static void settings_init(void) {
