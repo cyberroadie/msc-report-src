@@ -9,6 +9,7 @@
 #include "echoServer.h"
 
 #define RECVBUFSIZE 2048
+#define SCTP_CONTROL_VEC_SIZE_RCV  16384 // lib/libc/net/sctp_sys_calls.c
 
 struct settings settings;
 
@@ -59,36 +60,46 @@ int echoServer(char *host, int port, char *message) {
 
   printf("listening on port %d\n", port);
 
-  // Structure containing data
+
+  struct msghdr msg;
+  struct cmsghdr *cmsg;
+  struct sctp_rcvinfo *rinfo;
+  char cbuf[SCTP_CONTROL_VEC_SIZE_RCV];
+  bzero(&msg, sizeof(msg));
+  bzero(cbuf, sizeof(cbuf));
+  msg.msg_control = cbuf;
+  msg.msg_controllen = sizeof(cbuf);
+
   struct iovec iov[1];
   char buf[RECVBUFSIZE];
   iov->iov_base = buf;
   iov->iov_len = RECVBUFSIZE;
 
-  // Create buffer for message control
-  struct sctp_rcvinfo *rinfo;
-  struct cmsghdr *cmsg;
-  char cbuf[sizeof (*cmsg) + sizeof (*rinfo)];
-  bzero(cbuf, sizeof (*cmsg) + sizeof (*rinfo));
-  cmsg = (struct cmsghdr *)cbuf;
-  rinfo = (struct sctp_sndinfo *)(cmsg + 1);
-
   // Message header
-  struct msghdr msg[1];
-  bzero(msg, sizeof(msg));
-  msg->msg_iov = iov;
-  msg->msg_iovlen = 1;
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
  
   union sctp_notification *snp;
 
   for(;;) {
 
-    size_t length = recvmsg(sd, msg, 0);
-    if (msg->msg_flags & MSG_NOTIFICATION) {
+    size_t length = recvmsg(sd, &msg, 0);
+    if (msg.msg_flags & MSG_NOTIFICATION) {
       snp = (union sctp_notification *)buf;
       printf("[ Receive notification type %u ]\n",
           snp->sn_header.sn_type);
       continue;
+    }
+
+    if(msg.msg_controllen > 0) {
+      cmsg = CMSG_FIRSTHDR(&msg);
+      if (cmsg->cmsg_type == SCTP_RCVINFO) {
+        rinfo = (struct sctp_rcvinfo *)CMSG_DATA(cmsg);
+      }
+      printf("[ Receive echo (%u bytes): stream = %hu, "
+          "flags = %hx, ppid = %u ]\n", length,
+          rinfo->rcv_sid, rinfo->rcv_flags,
+          rinfo->rcv_ppid);
     }
 
     if(length == -1) {
@@ -96,11 +107,7 @@ int echoServer(char *host, int port, char *message) {
       continue;
     }
     
-    printf("[ Receive echo (%u bytes): stream = %hu, "
-        "flags = %hx, ppid = %u ]\n", length,
-        rinfo->rcv_sid, rinfo->rcv_flags,
-        rinfo->rcv_ppid);
-   
+    buf[length] = '\0'; 
     printf("message received: %s\n", buf);
 
   }

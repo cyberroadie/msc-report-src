@@ -2,11 +2,10 @@ package main
 
 import (
         "flag"
+        "fmt"
         "net"
         "os"
-        "io"
         "log"
-        "encoding/binary"
 )
 
 type Settings struct {
@@ -18,7 +17,7 @@ type Settings struct {
 
 var (
         settings = Settings{
-                Address: flag.String("a", "127.0.0.1:4242", "address to listen on"),
+                Address: flag.String("a", "localhost:4242", "address to listen on"),
                 Message: flag.String("m", "recv", "message to send"),
                 Sctp: flag.Bool("s", false, "Use SCTP"),
                 Verbose: flag.Bool("v", false, "extra logging"),
@@ -26,20 +25,27 @@ var (
 )
 
 func echoServer(Address *string, Message *string) {
-	var netlisten net.Listener
-	var err error
+	var c net.PacketConn
+  var err error
 
-	netlisten, err = net.Listen("sctp", *settings.Address)
+  msg := make([]byte, 2048)
+
+	c, err = net.ListenPacket("sctp", *settings.Address)
 
 	if err != nil {
-		log.Printf("Error listening: %s", err)
+		log.Printf("Error listening: %v", err)
 		os.Exit(-1)
 	}
 
-	defer netlisten.Close()
+	defer c.Close()
 
 	for {
-		msg := netListen.ReceiveMsg();
+		_, _, err := c.ReadFrom(msg)
+    if err != nil {
+      log.Printf("Error: %v ", err)
+      break
+    }
+    fmt.Println("Message: " + string(msg))
 	}
 
 }

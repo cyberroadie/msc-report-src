@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(msc-project-src)
 
-add_subdirectory(client)
+add_subdirectory(client-sctp_sendv)
+add_subdirectory(client-sendmsg)
 add_subdirectory(server)
