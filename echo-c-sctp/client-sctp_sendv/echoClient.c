@@ -67,6 +67,7 @@ void *messageSender(void *arg) {
   // Send information structure
   sinfo.snd_sid = 1;
   sinfo.snd_ppid = htonl(424242);
+  sinfo.snd_flags = SCTP_UNORDERED;
 
   for(int i = 0; i < count; i++) {
     int n = sctp_sendv(sd, &iov, 1, (struct sockaddr *) &address, 1, (void *) &sinfo, sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0);
