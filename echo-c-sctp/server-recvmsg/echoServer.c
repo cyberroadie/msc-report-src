@@ -51,8 +51,17 @@ int echoServer(char *host, int port, char *message) {
   initMsg.sinit_max_attempts = 0;
   initMsg.sinit_max_init_timeo = 0;
 
-  setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initMsg, sizeof(initMsg));
+  if(setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initMsg, sizeof(initMsg)) < 0) {
+    perror("setsockopt SCTP_INITMSG");
+    exit(EXIT_FAILURE);
+  };
 
+  int on = 1;
+  if (setsockopt(sd, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on)) < 0) {
+    perror("setsockopt SCTP_RECVRCVINFO");
+    exit(EXIT_FAILURE);
+  }
+  
   if(listen(sd, 1) < 0) {
     perror("failed to lisen for connection");
     exit(EXIT_FAILURE);
@@ -84,12 +93,6 @@ int echoServer(char *host, int port, char *message) {
   for(;;) {
 
     size_t length = recvmsg(sd, &msg, 0);
-    if (msg.msg_flags & MSG_NOTIFICATION) {
-      snp = (union sctp_notification *)buf;
-      printf("[ Receive notification type %u ]\n",
-          snp->sn_header.sn_type);
-      continue;
-    }
 
     if(msg.msg_controllen > 0) {
       cmsg = CMSG_FIRSTHDR(&msg);
