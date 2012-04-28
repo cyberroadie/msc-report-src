@@ -64,16 +64,21 @@ int echoServer(char *host, int port, char *message) {
   char buf[RECVBUFSIZE];
   iov->iov_base = buf;
   iov->iov_len = RECVBUFSIZE;
- 
-  union sctp_notification *snp;
 
   struct sockaddr_in from;
-  socklen_t *fromlen, infolen;
-  int *iovlen, flags = 1;
-  unsigned int infotype;
+  socklen_t *fromlen = NULL, infolen;
+  int flags = 0;
+  unsigned int infotype = 0;
   struct sctp_rcvinfo rinfo;
+  bzero(&rinfo, sizeof(struct sctp_rcvinfo));
   infolen = sizeof(rinfo);
 
+  int on = 1;
+  if (setsockopt(sd, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on)) < 0) {
+    perror("setsockopt SCTP_RECVRCVINFO");
+    exit(EXIT_FAILURE);
+  }
+  
   for(;;) {
     int length = sctp_recvv(sd, iov, 1, (struct sockaddr *) &from, fromlen, &rinfo, &infolen, &infotype, &flags);
     
