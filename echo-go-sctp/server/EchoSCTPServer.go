@@ -40,6 +40,7 @@ func echoServer(Address *string, Message *string) {
 	defer c.Close()
 
 	for {
+		log.Printf("Listening on %s", *settings.Address)
 		_, _, err := c.ReadFrom(msg)
     if err != nil {
       log.Printf("Error: %v ", err)
