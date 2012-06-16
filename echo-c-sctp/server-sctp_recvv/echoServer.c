@@ -52,6 +52,7 @@ int echoServer(char *host, int port, char *message) {
   initMsg.sinit_max_init_timeo = 0;
 
   setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initMsg, sizeof(initMsg));
+  setsockopt(sd, IPPROTO_SCTP, SCTP_LISTEN_FIX, 0, sizeof(SCTP_LISTEN_FIX));
 
   if(listen(sd, 1) < 0) {
     perror("failed to lisen for connection");
@@ -79,21 +80,51 @@ int echoServer(char *host, int port, char *message) {
     exit(EXIT_FAILURE);
   }
   
+  struct sctp_sndinfo sinfo;
+  bzero(&sinfo, sizeof(struct sctp_sndinfo));
+
+ 
   for(;;) {
-    int length = sctp_recvv(sd, iov, 1, (struct sockaddr *) &from, fromlen, &rinfo, &infolen, &infotype, &flags);
+    int length = sctp_recvv(sd, 
+                            iov, 
+                            1, 
+                            (struct sockaddr *) &from, 
+                            fromlen, 
+                            &rinfo, 
+                            &infolen, 
+                            &infotype,
+                            &flags);
     
     if(length == -1) {
       perror("error receiving message: ");
       continue;
     }
    
+    buf[length] = '\0'; 
+    printf("message received: %s\n", buf);
+    
     printf("[ Receive echo (%u bytes): stream = %hu, "
         "flags = %hx, ppid = %u ]\n", length,
         rinfo.rcv_sid, rinfo.rcv_flags,
         ntohl(rinfo.rcv_ppid));
 
-    buf[length] = '\0'; 
-    printf("message received: %s\n", buf);
+
+    sinfo.snd_sid = rinfo.rcv_sid;
+    sinfo.snd_flags = rinfo.rcv_flags;
+    sinfo.snd_ppid = rinfo.rcv_ppid;
+    sinfo.snd_assoc_id = rinfo.rcv_assoc_id;
+
+    printf("sending message back: %s\n", buf);
+    
+    sctp_sendv(sd, 
+        iov,
+        1,
+        (struct sockaddr *) &from,
+        1,
+        (void *) &sinfo,
+        sizeof(struct sctp_sndinfo),
+        SCTP_SENDV_SNDINFO,
+        0);
 
   }
 

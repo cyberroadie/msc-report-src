@@ -14,6 +14,7 @@
 #include "echoClient.h"
 
 #define PPID 424242
+#define RECVBUFSIZE 2048
 
 typedef struct messageSender_data {
   char *host;
@@ -47,6 +48,8 @@ void *messageSender(void *arg) {
     perror("Error setting socket options");
     exit(EXIT_FAILURE);
   }
+  const int on = 1;
+  setsockopt(sd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &on, sizeof(int));
 
   struct sockaddr_in  address;
   bzero((void*)&address, sizeof(address));
@@ -69,12 +72,49 @@ void *messageSender(void *arg) {
   sinfo.snd_ppid = htonl(424242);
   sinfo.snd_flags = SCTP_UNORDERED;
 
+  // receiving variables
+  struct iovec echoiov[1];
+  char buf[RECVBUFSIZE];
+  echoiov->iov_base = buf;
+  echoiov->iov_len = RECVBUFSIZE;
+
+  struct sockaddr_in from;
+  socklen_t *fromlen = NULL, infolen;
+  int flags = 0;
+  unsigned int infotype = 0;
+  struct sctp_rcvinfo rinfo;
+  bzero(&rinfo, sizeof(struct sctp_rcvinfo));
+  infolen = sizeof(rinfo);
+
   for(int i = 0; i < count; i++) {
-    int n = sctp_sendv(sd, &iov, 1, (struct sockaddr *) &address, 1, (void *) &sinfo, sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0);
+    
+    printf("sending message: %s\n", message);
+    
+    int n = sctp_sendv(sd, 
+                       &iov, 
+                       1, 
+                       (struct sockaddr *) &address, 
+                       1, 
+                       (void *) &sinfo, 
+                       sizeof(struct sctp_sndinfo), 
+                       SCTP_SENDV_SNDINFO, 
+                       0);
+
     if(n == -1) {
       perror("failure sending message");
       exit(EXIT_FAILURE);
     }
+
+    int length = sctp_recvv(sd, 
+        echoiov, 
+        1, 
+        (struct sockaddr *) &from, 
+        fromlen, 
+        &rinfo, 
+        &infolen, 
+        &infotype,
+        &flags);
+
   } 
 }
 
