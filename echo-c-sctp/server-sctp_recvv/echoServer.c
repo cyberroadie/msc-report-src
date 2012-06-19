@@ -70,7 +70,7 @@ int echoServer(char *host, int port, char *message) {
 
   struct sockaddr_in  client_addr;
   bzero((void*)&client_addr, sizeof(client_addr));
-  socklen_t *fromlen = NULL, infolen;
+  socklen_t fromlen, infolen;
   int flags = 0;
   unsigned int infotype = 0;
   struct sctp_rcvinfo rinfo;
@@ -93,7 +93,7 @@ int echoServer(char *host, int port, char *message) {
                             iov, 
                             1, 
                             (struct sockaddr *) &client_addr, 
-                            fromlen, 
+                            &fromlen, 
                             &rinfo, 
                             &infolen, 
                             &infotype,

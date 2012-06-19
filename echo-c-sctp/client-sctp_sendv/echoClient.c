@@ -127,7 +127,14 @@ void *messageSender(void *arg) {
         &infotype,
         &flags);
 
-  } 
+    if(length == -1) {
+      perror("failure receiving message");
+      exit(EXIT_FAILURE);
+    }
+    
+  }
+  
+  
 }
 
 static void settings_init(void) {
