@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/sctp.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include "echoServer.h"
 
 #define RECVBUFSIZE 2048
@@ -52,10 +53,11 @@ int echoServer(char *host, int port, char *message) {
   initMsg.sinit_max_init_timeo = 0;
 
   setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initMsg, sizeof(initMsg));
-  setsockopt(sd, IPPROTO_SCTP, SCTP_LISTEN_FIX, 0, sizeof(SCTP_LISTEN_FIX));
+  const int on = 1;
+  setsockopt(sd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &on, sizeof(int));
 
   if(listen(sd, 1) < 0) {
-    perror("failed to lisen for connection");
+    perror("failed to listen for connection");
     exit(EXIT_FAILURE);
   }
 
@@ -66,7 +68,8 @@ int echoServer(char *host, int port, char *message) {
   iov->iov_base = buf;
   iov->iov_len = RECVBUFSIZE;
 
-  struct sockaddr_in from;
+  struct sockaddr_in  client_addr;
+  bzero((void*)&client_addr, sizeof(client_addr));
   socklen_t *fromlen = NULL, infolen;
   int flags = 0;
   unsigned int infotype = 0;
@@ -74,7 +77,6 @@ int echoServer(char *host, int port, char *message) {
   bzero(&rinfo, sizeof(struct sctp_rcvinfo));
   infolen = sizeof(rinfo);
 
-  int on = 1;
   if (setsockopt(sd, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on)) < 0) {
     perror("setsockopt SCTP_RECVRCVINFO");
     exit(EXIT_FAILURE);
@@ -85,10 +87,12 @@ int echoServer(char *host, int port, char *message) {
 
  
   for(;;) {
+
+    printf("listening for message\n");
     int length = sctp_recvv(sd, 
                             iov, 
                             1, 
-                            (struct sockaddr *) &from, 
+                            (struct sockaddr *) &client_addr, 
                             fromlen, 
                             &rinfo, 
                             &infolen, 
@@ -97,7 +101,7 @@ int echoServer(char *host, int port, char *message) {
     
     if(length == -1) {
       perror("error receiving message: ");
-      continue;
+      exit(EXIT_FAILURE);
     }
    
     buf[length] = '\0'; 
@@ -109,22 +113,43 @@ int echoServer(char *host, int port, char *message) {
         ntohl(rinfo.rcv_ppid));
 
 
+
     sinfo.snd_sid = rinfo.rcv_sid;
-    sinfo.snd_flags = rinfo.rcv_flags;
+    sinfo.snd_flags = SCTP_UNORDERED;
     sinfo.snd_ppid = rinfo.rcv_ppid;
     sinfo.snd_assoc_id = rinfo.rcv_assoc_id;
 
     printf("sending message back: %s\n", buf);
+
+    char str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, str, sizeof(str));
+    printf("On address %s\n", str);
+//
+//    sctp_sendv(sd, 
+//        iov,
+//        1,
+//        (struct sockaddr *) &from,
+//        1,
+//        (void *) &sinfo,
+//        sizeof(struct sctp_sndinfo),
+//        SCTP_SENDV_SNDINFO,
+//        0);
+//    
+    int n = sctp_sendv(sd, 
+                       iov, 
+                       1, 
+                       (struct sockaddr *) &client_addr, 
+                       1, 
+                       (void *) &sinfo, 
+                       sizeof(struct sctp_sndinfo), 
+                       SCTP_SENDV_SNDINFO, 
+                       0);
+    if(n == -1) {
+      perror("error receiving message: ");
+      exit(EXIT_FAILURE);
+    }
     
-    sctp_sendv(sd, 
-        iov,
-        1,
-        (struct sockaddr *) &from,
-        1,
-        (void *) &sinfo,
-        sizeof(struct sctp_sndinfo),
-        SCTP_SENDV_SNDINFO,
-        0);
+    printf("message sent\n");
 
   }
 

@@ -85,10 +85,22 @@ void *messageSender(void *arg) {
   struct sctp_rcvinfo rinfo;
   bzero(&rinfo, sizeof(struct sctp_rcvinfo));
   infolen = sizeof(rinfo);
+  
+  struct sctp_initmsg initMsg;
+  bzero((void *)&initMsg, sizeof(initMsg));
+  initMsg.sinit_num_ostreams = 100;
+  initMsg.sinit_max_instreams = 100;
+  initMsg.sinit_max_attempts = 0;
+  initMsg.sinit_max_init_timeo = 0;
 
+  setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initMsg, sizeof(initMsg));
+ 
   for(int i = 0; i < count; i++) {
     
     printf("sending message: %s\n", message);
+    char str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &address.sin_addr, str, sizeof(str));
+    printf("On address %s\n", str);
     
     int n = sctp_sendv(sd, 
                        &iov, 
