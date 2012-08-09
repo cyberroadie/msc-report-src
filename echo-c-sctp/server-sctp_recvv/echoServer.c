@@ -68,14 +68,6 @@ int echoServer(char *host, int port, char *message) {
   iov->iov_base = buf;
   iov->iov_len = RECVBUFSIZE;
 
-  struct sockaddr_in  client_addr;
-  bzero((void*)&client_addr, sizeof(client_addr));
-  socklen_t fromlen, infolen;
-  int flags = 0;
-  unsigned int infotype = 0;
-  struct sctp_rcvinfo rinfo;
-  bzero(&rinfo, sizeof(struct sctp_rcvinfo));
-  infolen = sizeof(rinfo);
 
   if (setsockopt(sd, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on)) < 0) {
     perror("setsockopt SCTP_RECVRCVINFO");
@@ -89,6 +81,15 @@ int echoServer(char *host, int port, char *message) {
   for(;;) {
 
     printf("listening for message\n");
+    struct sockaddr_in  client_addr;
+    bzero((void*)&client_addr, sizeof(client_addr));
+    socklen_t fromlen, infolen;
+    int flags = 0;
+    unsigned int infotype = 0;
+    struct sctp_rcvinfo rinfo;
+    bzero(&rinfo, sizeof(struct sctp_rcvinfo));
+    infolen = sizeof(rinfo);
+    fromlen = sizeof(client_addr);
     int length = sctp_recvv(sd, 
                             iov, 
                             1, 

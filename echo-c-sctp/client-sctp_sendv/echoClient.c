@@ -37,7 +37,7 @@ void *messageSender(void *arg) {
   sd = socket(PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
   
   if(sd == -1) {
-    perror("failure opeing socket");
+    perror("failure opening socket");
     exit(EXIT_FAILURE);
   }
   
@@ -45,7 +45,7 @@ void *messageSender(void *arg) {
   initmsg.sinit_num_ostreams = 100;
   int s = setsockopt(sd, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg));
   if(s == -1) {
-    perror("Error setting socket options");
+    perror("error setting socket options");
     exit(EXIT_FAILURE);
   }
   const int on = 1;
@@ -100,7 +100,7 @@ void *messageSender(void *arg) {
     printf("sending message: %s\n", message);
     char str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &address.sin_addr, str, sizeof(str));
-    printf("On address %s\n", str);
+    printf("on address %s\n", str);
     
     int n = sctp_sendv(sd, 
                        &iov, 
@@ -130,11 +130,10 @@ void *messageSender(void *arg) {
     if(length == -1) {
       perror("failure receiving message");
       exit(EXIT_FAILURE);
+    } else {
+      printf("received: %s\n", buf);
     }
-    
   }
-  
-  
 }
 
 static void settings_init(void) {
