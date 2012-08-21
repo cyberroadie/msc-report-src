@@ -35,19 +35,19 @@ func echoServer(Address *string, Message *string) {
 	if err != nil {
 		log.Printf("Error listening: %v", err)
 		os.Exit(-1)
-	}
+  }
+  defer c.Close()
 
-	defer c.Close()
-
-	for {
-		log.Printf("Listening on %s", *settings.Address)
-		_, _, err := c.ReadFrom(msg)
+  for {
+    log.Printf("Listening on %s", *settings.Address)
+    _, addr, err := c.ReadFrom(msg)
     if err != nil {
       log.Printf("Error: %v ", err)
       break
     }
     fmt.Println("Message: " + string(msg))
-	}
+    c.WriteTo(msg, addr)
+  }
 
 }
 
