@@ -11,8 +11,8 @@ import (
   "os"
 )
 
-var height = flag.Int("h", 1000, "Image height")
-var width = flag.Int("w", 1000, "Image width")
+var height = flag.Int("h", 4000, "Image height")
+var width = flag.Int("w", 4000, "Image width")
 
 type Point struct {
   x, y float64
@@ -22,13 +22,14 @@ func main() {
   flag.Parse()
   var size = *height * *width
 
-  var image = make([]uint64, size + 1)
+  var fractal = make([]uint64, size + 1)
+
   var points = make([]Point, size + 1)
   var ix, iy int
   var x, y float64
 
   for tt := 0; tt < 1000000; tt++ {
-    for t := 0; t < 100; t++ {
+    for t := 0; t < 1000; t++ {
       x = 6 * rand.Float64() - 3
       y = 6 * rand.Float64() - 3
 
@@ -38,7 +39,7 @@ func main() {
           iy = int(0.3 * float64(*height) * points[i].y + float64(*height/2))
           if ix >= 0 && iy >= 0 && ix < *width && iy < *height {
             var z = iy * *width + ix
-            image[z] = image[z] + 1
+            fractal[z] = fractal[z] + 1
           }
         }
       }
@@ -46,7 +47,7 @@ func main() {
   }
 
   print("calculation finished, writing image")
-  writeImage(image, *width, *height)
+  writeImage(fractal, *width, *height)
 
 }
 
@@ -88,6 +89,8 @@ func writeImage(fractal []uint64, width int, height int) {
 
   var ramp float64
   m := image.NewRGBA(image.Rect(0, 0, width, height))
+  background := color.RGBA{0, 0, 0, 0}
+  draw.Draw(m, m.Bounds(), &image.Uniform{background}, image.ZP, draw.Src)
   for i, v := range fractal {
     ramp = float64(2)*(float64(v) - float64(smallest) / float64(biggest - smallest))
     if ramp > float64(1) {
@@ -95,14 +98,12 @@ func writeImage(fractal []uint64, width int, height int) {
     }
     ramp = math.Pow(ramp, float64(0.5))
     //var rgb = int(ramp * float64(255))
-    var x = i / height
+    var x = i - (i / width) * width
     var y = (i - x) / width
     //m.Set(x, y, color.RGBA{uint8(rgb),uint8(rgb), uint8(rgb),255})
-    m.Set(x, y, color.RGBA{uint8(v),uint8(v), uint8(v),255})
+    m.Set(y, x, color.RGBA{0, 0, uint8(v), 255})
+    //m.Set(x, y, color.RGBA{0, 0, 255, 255})
   }
-
-  background := color.RGBA{0, 0, 0, 0}
-  draw.Draw(m, m.Bounds(), &image.Uniform{background}, image.ZP, draw.Src)
 
 	f, err := os.OpenFile("buddha.png", os.O_CREATE | os.O_WRONLY, 0666)
 	if(err != nil) {

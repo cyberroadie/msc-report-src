@@ -55,10 +55,6 @@ func transform(x float32, y float32) (float32, float32) {
 	return x, y
 }
 
-type fern {
-
-}
-
 func transformPoint(x, y, a, b, c ,d , s float32) (float32, float32) {
 	return ((a * x) + (b * y)), ((c * x) + (d * y) + s)
 }
