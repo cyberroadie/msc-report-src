@@ -47,8 +47,8 @@ func main() {
     os.Exit(-1)
   }
 
-  var message = "hello"
-  bmessage := []byte("hello")
+  var message = *settings.Message
+  bmessage := []byte(message)
 
   for i := 0; i < 10; i++ {
    log.Printf("Sending message '%s'", message)
