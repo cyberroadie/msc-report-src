@@ -34,7 +34,7 @@ void *messageSender(void *arg) {
   int count = data->count;
   int sd;
 
-  sd = socket(PF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+  sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
   
   if(sd == -1) {
     perror("failure opening socket");
