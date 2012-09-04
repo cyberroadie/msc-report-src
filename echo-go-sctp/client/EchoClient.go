@@ -1,10 +1,10 @@
 package main
 
 import (
-  "flag"
-  "net"
-  "os"
-  "log"
+	"flag"
+	"log"
+	"net"
+	"os"
 )
 
 type Settings struct {
@@ -25,44 +25,42 @@ var (
 	}
 )
 
-
 func main() {
-  flag.Parse()
-  msg := make([]byte, 2048)
+	flag.Parse()
 
-  conn , err := net.Dial("sctp", *settings.Address)
-  var pconn = conn.(net.PacketConn)
+	addr, err := net.ResolveSCTPAddr("sctp", *settings.Address)
+	if err != nil {
+		println(err)
+		os.Exit(-1)
+	}
 
-  if err != nil {
-    println("Error listening " + err.Error())
-    os.Exit(-1)
-  }
-  defer pconn.Close()
+	msg := make([]byte, 2048)
+	conn, err := net.DialSCTP("sctp", nil, addr)
 
-  log.Printf("Dialing to %s", *settings.Address)
+	if err != nil {
+		println("Error listening " + err.Error())
+		os.Exit(-1)
+	}
+	defer conn.Close()
 
-  addr, err := net.ResolveSCTPAddr("sctp", *settings.Address)
-  if err != nil {
-    println(err)
-    os.Exit(-1)
-  }
+	log.Printf("Dialing to %s", *settings.Address)
 
-  var message = *settings.Message
-  bmessage := []byte(message)
+	var message = *settings.Message
+	bmessage := []byte(message)
 
-  for i := 0; i < 10; i++ {
-   log.Printf("Sending message '%s'", message)
-   _, err := pconn.WriteTo(bmessage, addr)
-   if err != nil {
-      log.Printf("WriteTo error: %v", err)
-      break
-    }
-    _, _, err = pconn.ReadFrom(msg)
-   if err != nil {
-      println("ReadFrom error")
-      print(err)
-      break
-    }
-    println("Received: " + string(msg))
-  }
+	for i := 0; i < 10; i++ {
+		log.Printf("Sending message '%s'", message)
+		_, err := conn.WriteTo(bmessage, addr)
+		if err != nil {
+			log.Printf("WriteTo error: %v", err)
+			break
+		}
+		_, _, err = conn.ReadFrom(msg)
+		if err != nil {
+			println("ReadFrom error")
+			print(err)
+			break
+		}
+		println("Received: " + string(msg))
+	}
 }
