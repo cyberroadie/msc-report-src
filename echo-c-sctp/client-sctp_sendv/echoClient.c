@@ -48,8 +48,8 @@ void *messageSender(void *arg) {
     perror("error setting socket options");
     exit(EXIT_FAILURE);
   }
-  const int on = 1;
-  setsockopt(sd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &on, sizeof(int));
+  //const int on = 0;
+  //setsockopt(sd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &on, sizeof(int));
 
   struct sockaddr_in  address;
   bzero((void*)&address, sizeof(address));
@@ -68,9 +68,9 @@ void *messageSender(void *arg) {
   bzero(&sinfo, sizeof(struct sctp_sndinfo));
 
   // Send information structure
-  sinfo.snd_sid = 1;
+  sinfo.snd_sid = 3;
   sinfo.snd_ppid = htonl(424242);
-  sinfo.snd_flags = SCTP_UNORDERED;
+  //sinfo.snd_flags = SCTP_UNORDERED;
 
   // receiving variables
   struct iovec echoiov[1];
@@ -89,7 +89,7 @@ void *messageSender(void *arg) {
   struct sctp_initmsg initMsg;
   bzero((void *)&initMsg, sizeof(initMsg));
   initMsg.sinit_num_ostreams = 100;
-  initMsg.sinit_max_instreams = 100;
+  initMsg.sinit_max_instreams = 0;
   initMsg.sinit_max_attempts = 0;
   initMsg.sinit_max_init_timeo = 0;
 

@@ -8,7 +8,7 @@ func main() {
   conn, _ := net.ListenPacket("sctp", "localhost:4242")
   var sconn = conn.(*net.SCTPConn)
   defer sconn.Close()
-  message := make([]byte, 5)
+  message := make([]byte, 1024)
   for {
     _, _, stream, _ := sconn.ReadFromSCTP(message)
     println("stream " + strconv.Itoa(int(stream)) + ": " + string(message))

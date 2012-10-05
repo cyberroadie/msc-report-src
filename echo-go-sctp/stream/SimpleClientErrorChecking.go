@@ -10,11 +10,11 @@ func main() {
     return
   }
 	defer conn.Close()
-	message := []byte("paard")
-  _, er2 := conn.WriteToSCTP(message, addr, 1)
+	message := []byte("paarden")
+  _, er2 := conn.WriteToSCTP(message, addr, 4)
   if er2 != nil {
     print(er2.Error())
     return
   }
-	conn.WriteToSCTP(message, addr, 2)
+	conn.WriteToSCTP(message, addr, 3)
 }
