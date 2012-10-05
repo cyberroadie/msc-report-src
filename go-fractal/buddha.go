@@ -13,8 +13,8 @@ import (
   "os"
 )
 
-var height = flag.Int("h", 4000, "Image height")
-var width = flag.Int("w", 4000, "Image width")
+var height = flag.Int("h", 5000, "Image height")
+var width = flag.Int("w", 5000, "Image width")
 
 type Point struct {
   x, y float64
@@ -24,10 +24,10 @@ func main() {
   flag.Parse()
   var size = *height * *width
 
-  ci := make(chan int)
+  var max = 1000000
+  ci := make(chan int, max / 10)
   quit := make(chan bool)
   go collectData(ci, quit, size)
-  var max = 1000000
   wg := &sync.WaitGroup{}
 
   for i := 0; i < 2; i++ {
@@ -82,7 +82,7 @@ func collectData(ci chan int, quit chan bool, size int) {
     if !ok {
       break
     }
-    fractal[i] = fractal[1] + 1
+    fractal[i] = fractal[i] + 1
   }
 
   println("calculation finished, writing image")
