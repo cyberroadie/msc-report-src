@@ -2,6 +2,8 @@ package main
 
 import (
   "flag"
+  "sync"
+  "strconv"
 	"image"
 	"image/draw"
 	"image/png"
@@ -22,15 +24,36 @@ func main() {
   flag.Parse()
   var size = *height * *width
 
+  ci := make(chan int)
+  quit := make(chan bool)
+  go collectData(ci, quit, size)
+  var max = 1000000
+  wg := &sync.WaitGroup{}
+
+  for i := 0; i < 2; i++ {
+    var rng = max / 2
+    var start = i * rng
+    var end = i * rng + rng
+    wg.Add(1)
+    println("starting buddha loop " + strconv.Itoa(start) + " - " + strconv.Itoa(end))
+    go buddhaLoop(start, end, ci, size, wg)
+  }
+  println("waiting")
+  wg.Wait()
+  println("closing channel")
+  close(ci)
+
+  <-quit
+  println("done")
+
+}
+
+func buddhaLoop(start int, end int, ci chan int, size int, wg *sync.WaitGroup) {
   var points = make([]Point, size + 1)
   var ix, iy int
   var x, y float64
 
-  ci := make(chan int)
-  quit := make(chan bool)
-  go collectData(ci, quit, size)
-
-  for tt := 0; tt < 1000000; tt++ {
+  for tt := start; tt < end; tt++ {
     for t := 0; t < 1000; t++ {
       x = 6 * rand.Float64() - 3
       y = 6 * rand.Float64() - 3
@@ -47,14 +70,8 @@ func main() {
       }
     }
   }
-
-  select {
-    case <- quit:
-      println("done")
-      return
-    default:
-   }
-
+  wg.Done()
+  return
 }
 
 func collectData(ci chan int, quit chan bool, size int) {
@@ -68,9 +85,8 @@ func collectData(ci chan int, quit chan bool, size int) {
     fractal[i] = fractal[1] + 1
   }
 
-  print("calculation finished, writing image")
+  println("calculation finished, writing image")
   writeImage(fractal, *width, *height)
-
   quit <- true
 
 }
@@ -140,8 +156,4 @@ func writeImage(fractal []uint64, width int, height int) {
 	println("Done")
 
 }
-
-
-
-
 
