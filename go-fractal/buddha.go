@@ -22,11 +22,13 @@ func main() {
   flag.Parse()
   var size = *height * *width
 
-  var fractal = make([]uint64, size + 1)
-
   var points = make([]Point, size + 1)
   var ix, iy int
   var x, y float64
+
+  ci := make(chan int)
+  quit := make(chan bool)
+  go collectData(ci, quit, size)
 
   for tt := 0; tt < 1000000; tt++ {
     for t := 0; t < 1000; t++ {
@@ -39,17 +41,40 @@ func main() {
           iy = int(0.3 * float64(*height) * points[i].y + float64(*height/2))
           if ix >= 0 && iy >= 0 && ix < *width && iy < *height {
             var z = iy * *width + ix
-            fractal[z] = fractal[z] + 1
+            ci <- z
           }
         }
       }
     }
   }
 
+  select {
+    case <- quit:
+      println("done")
+      return
+    default:
+   }
+
+}
+
+func collectData(ci chan int, quit chan bool, size int) {
+  var fractal = make([]uint64, size + 1)
+
+  for {
+    i, ok := <-ci
+    if !ok {
+      break
+    }
+    fractal[i] = fractal[1] + 1
+  }
+
   print("calculation finished, writing image")
   writeImage(fractal, *width, *height)
 
+  quit <- true
+
 }
+
 
 func iterate(x0 float64, y0 float64, p []Point) (int, bool) {
   var x, y, xnew, ynew float64;
