@@ -75,7 +75,7 @@ func buddhaLoop(start int, end int, ci chan int, size int, wg *sync.WaitGroup) {
 }
 
 func collectData(ci chan int, quit chan bool, size int) {
-  var fractal = make([]uint64, size + 1)
+  fractal := make([]uint64, size + 1)
 
   for {
     i, ok := <-ci
