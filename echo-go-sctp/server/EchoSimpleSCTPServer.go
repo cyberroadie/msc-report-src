@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
-	"strconv"
 )
 
 type Settings struct {
@@ -25,29 +25,27 @@ var (
 )
 
 func echoServer(Address *string, Message *string) {
-	addr, _ := net.ResolveSCTPAddr("sctp", *settings.Address)
-	conn, err := net.ListenSCTP("sctp", addr)
+	var c net.PacketConn
+	var err error
+
+	c, err = net.ListenPacket("sctp", *settings.Address)
 
 	if err != nil {
 		log.Printf("Error listening: %v", err)
 		os.Exit(-1)
 	}
-	defer conn.Close()
+	defer c.Close()
 
 	for {
 		msg := make([]byte, 2048)
 		log.Printf("Listening on %s", *settings.Address)
-		aid, addr, sid, err := conn.ReadFromSCTP(msg)
+		_, addr, err := c.ReadFrom(msg)
 		if err != nil {
 			log.Printf("Error: %v ", err)
 			break
 		}
-		println("********")
-		println("Message: " + string(msg))
-		println("Stream id: " + strconv.Itoa(int(sid)))
-		println("Association id: " + strconv.Itoa(int(aid)))
-		println("********")
-		conn.WriteTo(msg, addr)
+		fmt.Println("Message: " + string(msg))
+		c.WriteTo(msg, addr)
 	}
 
 }

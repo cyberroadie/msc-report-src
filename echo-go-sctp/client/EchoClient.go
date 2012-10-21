@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 type Settings struct {
@@ -48,7 +49,8 @@ func main() {
 	var message = *settings.Message
 	bmessage := []byte(message)
 
-	for i := 0; i < 10; i++ {
+	for {
+		//	for i := 0; i < 10; i++ {
 		log.Printf("Sending message '%s'", message)
 		_, err := conn.WriteTo(bmessage, addr)
 		if err != nil {
@@ -62,5 +64,6 @@ func main() {
 			break
 		}
 		println("Received: " + string(msg))
+		time.Sleep(1 * 1e9)
 	}
 }
